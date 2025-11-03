@@ -85,7 +85,7 @@
   Time: 45min
   ```
 
-- [~] **Implement NameManager mutations**
+- [x] **Implement NameManager mutations**
   ```
   Files: convex/names.ts
   Architecture: Implements Module 1 (NameManager) from DESIGN.md
@@ -106,7 +106,7 @@
 
 ### Backend: ProjectManager Module
 
-- [ ] **Implement ProjectManager queries**
+- [~] **Implement ProjectManager queries**
   ```
   Files: convex/projects.ts
   Architecture: Implements Module 2 (ProjectManager) from DESIGN.md
