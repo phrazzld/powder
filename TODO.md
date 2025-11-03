@@ -151,7 +151,7 @@
 
 ### Backend: ProjectNameLinker Module
 
-- [~] **Implement ProjectNameLinker mutations**
+- [x] **Implement ProjectNameLinker mutations**
   ```
   Files: convex/projectNameLinker.ts
   Architecture: Implements Module 3 (ProjectNameLinker) from DESIGN.md
@@ -180,7 +180,7 @@
 
 ### Next.js Setup & Layout
 
-- [ ] **Configure root layout with ConvexProvider**
+- [~] **Configure root layout with ConvexProvider**
   ```
   Files: app/layout.tsx, lib/convex.ts
   Architecture: Next.js root layout from DESIGN.md "Integration Points"
