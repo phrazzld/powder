@@ -26,7 +26,7 @@
   Time: 30min
   ```
 
-- [~] **Setup Convex backend**
+- [x] **Setup Convex backend**
   ```
   Files: convex.json, .env.local
   Commands:
@@ -38,7 +38,7 @@
   Time: 15min
   ```
 
-- [ ] **Install shadcn/ui components**
+- [~] **Install shadcn/ui components**
   ```
   Files: components/ui/* (auto-generated)
   Commands:
