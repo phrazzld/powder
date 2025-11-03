@@ -38,7 +38,7 @@
   Time: 15min
   ```
 
-- [~] **Install shadcn/ui components**
+- [x] **Install shadcn/ui components**
   ```
   Files: components/ui/* (auto-generated)
   Commands:
@@ -52,7 +52,7 @@
 
 ### Backend: Convex Schema & Database
 
-- [ ] **Implement Convex schema (names + projects tables)**
+- [~] **Implement Convex schema (names + projects tables)**
   ```
   Files: convex/schema.ts
   Architecture: Database schema from DESIGN.md "Integration Points"
