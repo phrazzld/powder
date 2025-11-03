@@ -126,7 +126,7 @@
   Time: 1.5hr
   ```
 
-- [~] **Implement ProjectManager mutations with validation**
+- [x] **Implement ProjectManager mutations with validation**
   ```
   Files: convex/projects.ts
   Architecture: Implements Module 2 (ProjectManager) from DESIGN.md
@@ -151,7 +151,7 @@
 
 ### Backend: ProjectNameLinker Module
 
-- [ ] **Implement ProjectNameLinker mutations**
+- [~] **Implement ProjectNameLinker mutations**
   ```
   Files: convex/projectNameLinker.ts
   Architecture: Implements Module 3 (ProjectNameLinker) from DESIGN.md
