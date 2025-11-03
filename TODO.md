@@ -180,7 +180,7 @@
 
 ### Next.js Setup & Layout
 
-- [~] **Configure root layout with ConvexProvider**
+- [x] **Configure root layout with ConvexProvider**
   ```
   Files: app/layout.tsx, lib/convex.ts
   Architecture: Next.js root layout from DESIGN.md "Integration Points"
@@ -194,7 +194,7 @@
   Time: 30min
   ```
 
-- [ ] **Create global styles and utilities**
+- [x] **Create global styles and utilities**
   ```
   Files: app/globals.css, lib/utils.ts
   Architecture: Tailwind + shadcn utilities from DESIGN.md
@@ -209,7 +209,7 @@
 
 ### Validation & Types
 
-- [ ] **Implement form validation schemas**
+- [~] **Implement form validation schemas**
   ```
   Files: lib/validation.ts
   Architecture: Zod schemas from DESIGN.md "Module 5: ProjectForm"
