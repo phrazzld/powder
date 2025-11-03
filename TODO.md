@@ -13,7 +13,7 @@
 
 ### Infrastructure Setup
 
-- [~] **Initialize Next.js 16 project with dependencies**
+- [x] **Initialize Next.js 16 project with dependencies**
   ```
   Files: package.json, next.config.js, tsconfig.json, tailwind.config.ts
   Commands:
@@ -26,7 +26,7 @@
   Time: 30min
   ```
 
-- [ ] **Setup Convex backend**
+- [~] **Setup Convex backend**
   ```
   Files: convex.json, .env.local
   Commands:
