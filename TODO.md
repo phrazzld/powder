@@ -106,7 +106,7 @@
 
 ### Backend: ProjectManager Module
 
-- [~] **Implement ProjectManager queries**
+- [x] **Implement ProjectManager queries**
   ```
   Files: convex/projects.ts
   Architecture: Implements Module 2 (ProjectManager) from DESIGN.md
@@ -126,7 +126,7 @@
   Time: 1.5hr
   ```
 
-- [ ] **Implement ProjectManager mutations with validation**
+- [~] **Implement ProjectManager mutations with validation**
   ```
   Files: convex/projects.ts
   Architecture: Implements Module 2 (ProjectManager) from DESIGN.md
