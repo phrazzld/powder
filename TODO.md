@@ -209,7 +209,7 @@
 
 ### Validation & Types
 
-- [~] **Implement form validation schemas**
+- [x] **Implement form validation schemas**
   ```
   Files: lib/validation.ts
   Architecture: Zod schemas from DESIGN.md "Module 5: ProjectForm"
@@ -228,7 +228,7 @@
 
 ### Dashboard Components
 
-- [ ] **Implement StatusFilter component**
+- [x] **Implement StatusFilter component**
   ```
   Files: components/status-filter.tsx
   Architecture: Client Component for status tabs from DESIGN.md "Module 4"
@@ -242,7 +242,7 @@
   Time: 30min
   ```
 
-- [ ] **Implement SearchBar component**
+- [x] **Implement SearchBar component**
   ```
   Files: components/search-bar.tsx
   Architecture: Client Component with debounce from DESIGN.md "Module 4"
@@ -257,7 +257,7 @@
   Time: 30min
   ```
 
-- [ ] **Implement StatsOverview component**
+- [x] **Implement StatsOverview component**
   ```
   Files: components/stats-overview.tsx
   Architecture: Client Component from DESIGN.md "Module 4"
@@ -271,11 +271,19 @@
   Time: 45min
   ```
 
-- [ ] **Implement ProjectTable component with TanStack Table**
+- [~] **Implement ProjectTable component with TanStack Table**
   ```
   Files: components/project-table.tsx
   Architecture: Client Component from DESIGN.md "Module 4"
   Pseudocode: See DESIGN.md table implementation patterns
+
+  Work Log:
+  - Implemented full TanStack Table with sorting
+  - Applied trivial simplifications: removed unused getFilteredRowModel, use capitalize CSS, safer URL parsing
+  - FUTURE REFACTORING OPPORTUNITY: TanStack Table is over-engineered for this use case (single sortable column, small dataset, no server interaction)
+    - Could replace with plain <table> + Array.sort() to save ~40 LOC and 18kB bundle
+    - Current implementation works correctly but adds unnecessary abstraction
+    - Consider simplifying post-MVP when optimizing bundle size
   Success:
     - Columns: name, description, status, tags, GitHub, production URL, actions
     - Uses usePreloadedQuery for data
