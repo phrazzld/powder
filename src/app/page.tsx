@@ -26,6 +26,8 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   const preloadedStats = await preloadQuery(api.projects.getProjectStats, {});
 
+  const hasActiveFilters = Boolean(searchParams.status || searchParams.search);
+
   return (
     <div className="container mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
@@ -42,7 +44,10 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         <StatusFilter />
       </div>
 
-      <ProjectTable preloadedProjects={preloadedProjects} />
+      <ProjectTable
+        preloadedProjects={preloadedProjects}
+        hasActiveFilters={hasActiveFilters}
+      />
     </div>
   );
 }

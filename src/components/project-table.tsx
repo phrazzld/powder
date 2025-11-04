@@ -28,11 +28,34 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, ArrowUpDown } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, ArrowUpDown, FolderPlus, FilterX, type LucideIcon } from "lucide-react";
+import Link from "next/link";
+
+type EmptyStateProps = {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  actionLabel: string;
+  actionHref: string;
+};
+
+function EmptyState({ icon: Icon, title, description, actionLabel, actionHref }: EmptyStateProps) {
+  return (
+    <div className="rounded-md border p-12 text-center">
+      <Icon className="mx-auto size-12 text-muted-foreground mb-4" />
+      <p className="text-lg font-medium mb-2">{title}</p>
+      <p className="text-sm text-muted-foreground mb-4">{description}</p>
+      <Button asChild>
+        <Link href={actionHref}>{actionLabel}</Link>
+      </Button>
+    </div>
+  );
+}
 
 type ProjectTableProps = {
   preloadedProjects: Preloaded<typeof api.projects.listProjects>;
   onDelete?: (projectId: string) => void;
+  hasActiveFilters?: boolean;
 };
 
 type ProjectRow = {
@@ -55,6 +78,7 @@ const STATUS_COLORS = {
 export function ProjectTable({
   preloadedProjects,
   onDelete,
+  hasActiveFilters = false,
 }: ProjectTableProps) {
   const router = useRouter();
   const projects = usePreloadedQuery(preloadedProjects);
@@ -244,14 +268,17 @@ export function ProjectTable({
 
   if (projects.length === 0) {
     return (
-      <div className="rounded-md border p-12 text-center">
-        <p className="text-lg font-medium text-muted-foreground mb-2">
-          No projects yet
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Create your first project to get started.
-        </p>
-      </div>
+      <EmptyState
+        icon={hasActiveFilters ? FilterX : FolderPlus}
+        title={hasActiveFilters ? "No projects match your filters" : "No projects yet"}
+        description={
+          hasActiveFilters
+            ? "Try adjusting your search or filter criteria"
+            : "Create your first project to get started"
+        }
+        actionLabel={hasActiveFilters ? "Clear Filters" : "Add Project"}
+        actionHref={hasActiveFilters ? "/" : "/projects/new"}
+      />
     );
   }
 

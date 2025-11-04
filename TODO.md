@@ -444,7 +444,7 @@
 
 ### Error Handling & UX Polish
 
-- [~] **Implement toast notifications**
+- [x] **Implement toast notifications**
   ```
   Files: components/ui/toast.tsx, lib/toast.ts (or use sonner library)
   Architecture: Error handling from DESIGN.md "Error Handling Strategy"
@@ -474,7 +474,7 @@
   Time: 1.5hr
   ```
 
-- [ ] **Add empty states**
+- [~] **Add empty states**
   ```
   Files: Update project-table.tsx, dashboard components
   Architecture: Empty states from DESIGN.md "Module 4"
