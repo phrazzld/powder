@@ -550,7 +550,7 @@
 
 ### Documentation & Deploy
 
-- [ ] **Write README with setup instructions**
+- [x] **Write README with setup instructions**
   ```
   Files: README.md
   Architecture: N/A (documentation)
