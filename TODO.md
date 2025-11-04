@@ -474,7 +474,7 @@
   Time: 1.5hr
   ```
 
-- [~] **Add empty states**
+- [x] **Add empty states**
   ```
   Files: Update project-table.tsx, dashboard components
   Architecture: Empty states from DESIGN.md "Module 4"
