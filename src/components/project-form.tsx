@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "convex/react";
+import { toast } from "sonner";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { api } from "@/../convex/_generated/api";
 import { Loader2 } from "lucide-react";
@@ -63,7 +64,6 @@ export function ProjectForm({ projectId, onSuccess, onCancel }: ProjectFormProps
   );
 
   const [tagsInput, setTagsInput] = useState<string>("");
-  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
@@ -179,16 +179,10 @@ export function ProjectForm({ projectId, onSuccess, onCancel }: ProjectFormProps
         setTagsInput("");
       }
 
+      toast.success(projectId ? "Project updated successfully" : "Project created successfully");
       onSuccess?.();
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Something went wrong while saving the project.";
-      setSubmitError(message);
-      if (typeof window !== "undefined") {
-        window.alert(message);
-      }
+    } catch (error: any) {
+      toast.error(error?.message ?? "Something went wrong while saving the project.");
     }
   });
 
@@ -211,12 +205,6 @@ export function ProjectForm({ projectId, onSuccess, onCancel }: ProjectFormProps
   return (
     <Form {...form}>
       <form onSubmit={onSubmit} className="space-y-6">
-        {submitError && (
-          <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-            {submitError}
-          </div>
-        )}
-
         <FormField
           control={form.control}
           name="status"

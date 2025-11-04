@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation } from "convex/react";
+import { toast } from "sonner";
 import { api } from "@/../convex/_generated/api";
 import {
   Dialog,
@@ -42,7 +43,10 @@ export function DeleteDialog({
         projectId: projectId as any,
         releaseNames,
       });
+      toast.success("Project deleted successfully");
       onOpenChange(false);
+    } catch (error: any) {
+      toast.error(error?.message ?? "Failed to delete project");
     } finally {
       setIsDeleting(false);
     }
@@ -67,7 +71,7 @@ export function DeleteDialog({
             <Checkbox
               id="release-names"
               checked={releaseNames}
-              onCheckedChange={(checked) => setReleaseNames(!!checked)}
+              onCheckedChange={(checked) => setReleaseNames(checked === true)}
             />
             <Label
               htmlFor="release-names"

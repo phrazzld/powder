@@ -444,7 +444,7 @@
 
 ### Error Handling & UX Polish
 
-- [ ] **Implement toast notifications**
+- [~] **Implement toast notifications**
   ```
   Files: components/ui/toast.tsx, lib/toast.ts (or use sonner library)
   Architecture: Error handling from DESIGN.md "Error Handling Strategy"
