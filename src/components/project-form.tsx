@@ -148,7 +148,6 @@ export function ProjectForm({ projectId, onSuccess, onCancel }: ProjectFormProps
   };
 
   const isLoadingProject = Boolean(projectId) && existingProject === undefined;
-  const isSubmitting = form.formState.isSubmitting;
 
   const onSubmit = form.handleSubmit(async (values) => {
     setSubmitError(null);
@@ -405,9 +404,9 @@ export function ProjectForm({ projectId, onSuccess, onCancel }: ProjectFormProps
           )}
         />
 
-        <div className="flex items-center gap-2">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? (
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
+            {form.formState.isSubmitting ? (
               <>
                 <Loader2 className="mr-2 size-4 animate-spin" />
                 Saving…
@@ -420,7 +419,8 @@ export function ProjectForm({ projectId, onSuccess, onCancel }: ProjectFormProps
             type="button"
             variant="outline"
             onClick={() => onCancel?.()}
-            disabled={isSubmitting}
+            disabled={form.formState.isSubmitting}
+            className="w-full sm:w-auto"
           >
             Cancel
           </Button>
