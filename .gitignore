@@ -43,3 +43,4 @@ next-env.d.ts
 # convex
 .convex/
 convex/_generated/
+.git_work/
