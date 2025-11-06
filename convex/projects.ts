@@ -225,6 +225,12 @@ function validateProjectRules(args: {
     if (args.nameId !== undefined) {
       throw new ConvexError('Ideas cannot have an assigned name');
     }
+    if (args.githubRepo) {
+      throw new ConvexError('Ideas cannot have a GitHub repository');
+    }
+    if (args.productionUrl) {
+      throw new ConvexError('Ideas cannot have a production URL');
+    }
   } else {
     // Rule: Active/paused/archived must have assigned name
     if (!args.nameId) {
@@ -269,21 +275,30 @@ export const createProject = mutation({
       v.literal('archived')
     ),
     nameId: v.optional(v.id('names')),
-    consideringNameIds: v.array(v.id('names')),
+    consideringNameIds: v.optional(v.array(v.id('names'))),
     description: v.optional(v.string()),
     githubRepo: v.optional(v.string()),
     productionUrl: v.optional(v.string()),
-    tags: v.array(v.string()),
+    tags: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args): Promise<Id<'projects'>> => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[projects.createProject] args', args);
+    }
     // Validate business rules
     validateProjectRules({
       status: args.status,
       nameId: args.nameId,
-      consideringNameIds: args.consideringNameIds,
+      consideringNameIds: args.consideringNameIds ?? [],
       githubRepo: args.githubRepo,
       productionUrl: args.productionUrl,
     });
+
+    const consideringNameIds = args.consideringNameIds ?? [];
+    const tags = args.tags ?? [];
+    const githubRepo = args.status === 'idea' ? undefined : args.githubRepo;
+    const productionUrl =
+      args.status === 'idea' ? undefined : args.productionUrl;
 
     const now = Date.now();
 
@@ -291,11 +306,11 @@ export const createProject = mutation({
     const projectId = await ctx.db.insert('projects', {
       status: args.status,
       nameId: args.nameId,
-      consideringNameIds: args.consideringNameIds,
+      consideringNameIds,
       description: args.description,
-      githubRepo: args.githubRepo,
-      productionUrl: args.productionUrl,
-      tags: args.tags,
+      githubRepo,
+      productionUrl,
+      tags,
       createdAt: now,
       updatedAt: now,
     });
@@ -334,38 +349,84 @@ export const updateProject = mutation({
     tags: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args): Promise<void> => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[projects.updateProject] args', args);
+    }
     const existing = await ctx.db.get(args.projectId);
     if (!existing) {
       throw new ConvexError('Project not found');
     }
 
-    // Build updated project data
-    const updated = {
-      status: args.status ?? existing.status,
-      nameId: args.nameId ?? existing.nameId,
-      consideringNameIds: args.consideringNameIds ?? existing.consideringNameIds,
-      githubRepo: args.githubRepo ?? existing.githubRepo,
-      productionUrl: args.productionUrl ?? existing.productionUrl,
-    };
+    const nextStatus = args.status ?? existing.status;
+    const nextNameId =
+      nextStatus === 'idea'
+        ? undefined
+        : args.nameId !== undefined
+        ? args.nameId
+        : existing.nameId;
+    const nextConsideringNameIds =
+      nextStatus === 'idea'
+        ? args.consideringNameIds ?? existing.consideringNameIds ?? []
+        : [];
+    const nextGithubRepo =
+      nextStatus === 'idea'
+        ? undefined
+        : args.githubRepo !== undefined
+        ? args.githubRepo
+        : existing.githubRepo;
+    const nextProductionUrl =
+      nextStatus === 'idea'
+        ? undefined
+        : args.productionUrl !== undefined
+        ? args.productionUrl
+        : existing.productionUrl;
 
     // Validate business rules with updated data
-    validateProjectRules(updated);
-
-    // Update project with new timestamp
-    await ctx.db.patch(args.projectId, {
-      ...(args.status !== undefined && { status: args.status }),
-      ...(args.nameId !== undefined && { nameId: args.nameId }),
-      ...(args.consideringNameIds !== undefined && {
-        consideringNameIds: args.consideringNameIds,
-      }),
-      ...(args.description !== undefined && { description: args.description }),
-      ...(args.githubRepo !== undefined && { githubRepo: args.githubRepo }),
-      ...(args.productionUrl !== undefined && {
-        productionUrl: args.productionUrl,
-      }),
-      ...(args.tags !== undefined && { tags: args.tags }),
-      updatedAt: Date.now(),
+    validateProjectRules({
+      status: nextStatus,
+      nameId: nextNameId,
+      consideringNameIds: nextConsideringNameIds,
+      githubRepo: nextGithubRepo,
+      productionUrl: nextProductionUrl,
     });
+
+    const patch: Partial<Project> & { updatedAt: number } = {
+      updatedAt: Date.now(),
+    };
+
+    if (args.status !== undefined) {
+      patch.status = args.status;
+    }
+
+    if (args.description !== undefined) {
+      patch.description = args.description;
+    }
+
+    if (args.tags !== undefined) {
+      patch.tags = args.tags ?? [];
+    }
+
+    if (nextStatus === 'idea') {
+      patch.nameId = undefined;
+      patch.githubRepo = undefined;
+      patch.productionUrl = undefined;
+      if (args.consideringNameIds !== undefined) {
+        patch.consideringNameIds = args.consideringNameIds ?? [];
+      }
+    } else {
+      if (args.nameId !== undefined) {
+        patch.nameId = args.nameId;
+      }
+      patch.consideringNameIds = [];
+      if (args.githubRepo !== undefined) {
+        patch.githubRepo = args.githubRepo;
+      }
+      if (args.productionUrl !== undefined) {
+        patch.productionUrl = args.productionUrl;
+      }
+    }
+
+    await ctx.db.patch(args.projectId, patch);
 
     // TODO: Handle name linking updates (when ProjectNameLinker implemented)
     // if (args.status && args.status !== existing.status) {

@@ -41,11 +41,11 @@ cd powder
 pnpm install
 ```
 
-### 3. Set up Convex
+### 3. Set up Convex (one-time)
 
 ```bash
-# Start Convex dev environment (creates .env.local automatically)
-pnpm convex:dev
+# Initialize Convex dev environment (creates .env.local automatically)
+pnpm dev:convex
 ```
 
 This will:
@@ -54,27 +54,30 @@ This will:
 - Generate `.env.local` with `NEXT_PUBLIC_CONVEX_URL`
 - Deploy your schema and functions
 
-### 4. Start the development server
+Once complete, press Ctrl+C to stop.
 
-In a separate terminal:
+### 4. Start the development server
 
 ```bash
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see the app.
+This starts both Next.js and Convex concurrently. Open [http://localhost:3000](http://localhost:3000) to see the app.
 
 ## Development Commands
 
 ```bash
-# Frontend
-pnpm dev          # Start Next.js dev server (port 3000)
-pnpm build        # Production build
-pnpm start        # Start production server
-pnpm lint         # Run ESLint
+# Development
+pnpm dev           # Start both Next.js and Convex concurrently (port 3000)
+pnpm dev:next      # Start only Next.js dev server
+pnpm dev:convex    # Start only Convex dev mode
 
-# Backend (Convex)
-pnpm convex:dev   # Start Convex in dev mode (run in separate terminal)
+# Production
+pnpm build         # Production build
+pnpm start         # Start production server
+pnpm lint          # Run ESLint
+
+# Deployment
 pnpm convex:deploy # Deploy to Convex production
 ```
 

@@ -9,39 +9,79 @@ import { z } from 'zod';
  * - GitHub repo: must be in format owner/repo
  * - Production URL: must be valid URL format
  */
+const githubRepoRegex = /^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/;
+
+const normalizeOptionalString = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : undefined;
+};
+
 export const projectFormSchema = z
   .object({
     status: z.enum(['idea', 'active', 'paused', 'archived']),
     nameId: z.string().optional(),
-    consideringNameIds: z.array(z.string()),
+    consideringNameIds: z.array(z.string()).default([]),
     description: z.string().optional(),
-    githubRepo: z
-      .string()
-      .regex(
-        /^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/,
-        'Must be in format: owner/repo (e.g., facebook/react)'
-      )
-      .optional()
-      .or(z.literal('')),
-    productionUrl: z
-      .string()
-      .url('Must be a valid URL')
-      .optional()
-      .or(z.literal('')),
-    tags: z.array(z.string()),
+    githubRepo: z.preprocess(
+      normalizeOptionalString,
+      z
+        .string()
+        .regex(
+          githubRepoRegex,
+          'Must be in format: owner/repo (e.g., facebook/react)'
+        )
+        .optional()
+    ),
+    productionUrl: z.preprocess(
+      normalizeOptionalString,
+      z.string().url('Must be a valid URL').optional()
+    ),
+    tags: z.array(z.string()).default([]),
   })
-  .refine(
-    (data) => {
-      // Business rule: active/paused/archived must have nameId
-      if (data.status !== 'idea' && !data.nameId) {
-        return false;
+  .superRefine((data, ctx) => {
+    if (data.status === 'idea') {
+      if (data.nameId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['nameId'],
+          message: 'Ideas cannot have an assigned name',
+        });
       }
-      return true;
-    },
-    {
-      message: 'Active, paused, and archived projects must have an assigned name',
-      path: ['nameId'],
+      if (data.githubRepo) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['githubRepo'],
+          message: 'Ideas cannot have a GitHub repository',
+        });
+      }
+      if (data.productionUrl) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['productionUrl'],
+          message: 'Ideas cannot have a production URL',
+        });
+      }
+      return;
     }
-  );
+
+    if (!data.nameId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['nameId'],
+        message: 'Active, paused, and archived projects must have an assigned name',
+      });
+    }
+
+    if (data.consideringNameIds.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['consideringNameIds'],
+        message: 'Only ideas can track considering names',
+      });
+    }
+  });
 
 export type ProjectFormValues = z.infer<typeof projectFormSchema>;

@@ -1,18 +1,15 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { ProjectForm } from "@/components/project-form";
 import { Loader2 } from "lucide-react";
 
-type PageProps = {
-  params: { id: string };
-};
-
-export default function EditProjectPage({ params }: PageProps) {
+export default function EditProjectPage() {
   const router = useRouter();
+  const params = useParams<{ id: string }>();
   const projectId = params.id as Id<"projects">;
   const project = useQuery(api.projects.getProject, { projectId });
 

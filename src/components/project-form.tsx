@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { type FieldErrors, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { api } from "@/../convex/_generated/api";
-import { Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, Plus, X } from "lucide-react";
 
 import {
   Form,
@@ -18,12 +18,24 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ProjectNamePicker, type ProjectNameOption } from "@/components/project-name-picker";
+import {
+  createEmptyProjectFormValues,
+  ensureStringArray,
+  hydrateProjectFormValues,
+  parseTagsInput,
+  prepareProjectPayload,
+} from "@/lib/project-form-model";
 import { projectFormSchema, type ProjectFormValues } from "@/lib/validation";
 
 type ProjectFormProps = {
@@ -32,31 +44,10 @@ type ProjectFormProps = {
   onCancel?: () => void;
 };
 
-type NameOption = {
-  value: string;
-  label: string;
-};
-
-const getEmptyFormValues = (): ProjectFormValues => ({
-  status: "idea",
-  nameId: undefined,
-  consideringNameIds: [],
-  description: "",
-  githubRepo: "",
-  productionUrl: "",
-  tags: [],
-});
-
-function parseTags(value: string): string[] {
-  return value
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter((tag, index, all) => tag.length > 0 && all.indexOf(tag) === index);
-}
-
 export function ProjectForm({ projectId, onSuccess, onCancel }: ProjectFormProps) {
   const createProject = useMutation(api.projects.createProject);
   const updateProject = useMutation(api.projects.updateProject);
+  const createName = useMutation(api.names.createName);
   const availableNames = useQuery(api.names.getAvailableNames, {});
   const existingProject = useQuery(
     api.projects.getProject,
@@ -64,17 +55,22 @@ export function ProjectForm({ projectId, onSuccess, onCancel }: ProjectFormProps
   );
 
   const [tagsInput, setTagsInput] = useState<string>("");
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
+  const [isCreatingName, setIsCreatingName] = useState<boolean>(false);
+  const [newNameInput, setNewNameInput] = useState<string>("");
+  const [isSubmittingName, setIsSubmittingName] = useState<boolean>(false);
+  const [localNameOptions, setLocalNameOptions] = useState<ProjectNameOption[]>([]);
 
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
-    defaultValues: getEmptyFormValues(),
+    shouldUnregister: false,
+    defaultValues: createEmptyProjectFormValues(),
   });
 
   useEffect(() => {
     if (!projectId) {
-      form.reset(getEmptyFormValues());
+      form.reset(createEmptyProjectFormValues());
       setTagsInput("");
-      setSubmitError(null);
       return;
     }
 
@@ -83,38 +79,34 @@ export function ProjectForm({ projectId, onSuccess, onCancel }: ProjectFormProps
     }
 
     if (existingProject === null) {
-      setSubmitError("Project not found.");
       return;
     }
 
-    const hydratedValues: ProjectFormValues = {
-      status: existingProject.status,
-      nameId: existingProject.nameId ?? undefined,
-      consideringNameIds: existingProject.consideringNameIds ?? [],
-      description: existingProject.description ?? "",
-      githubRepo: existingProject.githubRepo ?? "",
-      productionUrl: existingProject.productionUrl ?? "",
-      tags: existingProject.tags ?? [],
-    };
-
-    form.reset(hydratedValues);
+    form.reset(hydrateProjectFormValues(existingProject));
     setTagsInput((existingProject.tags ?? []).join(", "));
-    setSubmitError(null);
   }, [existingProject, form, projectId]);
 
   const status = form.watch("status");
+  const advancedLabel =
+    status === "idea" ? "Advanced (Tags)" : "Advanced (GitHub, Production URL, Tags)";
 
   useEffect(() => {
-    if (status === "idea" && form.getValues("nameId")) {
+    const currentNameId = form.getValues("nameId");
+    if (status === "idea" && currentNameId) {
       form.setValue("nameId", undefined, { shouldDirty: true });
     }
 
-    if (status !== "idea" && form.getValues("consideringNameIds").length) {
+    if (status !== "idea" && Array.isArray(currentNameId)) {
+      form.setValue("nameId", undefined, { shouldDirty: false });
+    }
+
+    const currentConsideringNameIds = ensureStringArray(form.getValues("consideringNameIds"));
+    if (status !== "idea" && currentConsideringNameIds.length > 0) {
       form.setValue("consideringNameIds", [], { shouldDirty: true });
     }
   }, [form, status]);
 
-  const nameOptions: NameOption[] = useMemo(() => {
+  const nameOptions: ProjectNameOption[] = useMemo(() => {
     const optionMap = new Map<string, string>();
 
     availableNames?.forEach((name) => {
@@ -134,56 +126,127 @@ export function ProjectForm({ projectId, onSuccess, onCancel }: ProjectFormProps
       });
     }
 
+    localNameOptions.forEach((option) => {
+      optionMap.set(option.value, option.label);
+    });
+
     return Array.from(optionMap.entries())
       .map(([value, label]) => ({ value, label }))
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [availableNames, existingProject]);
+  }, [availableNames, existingProject, localNameOptions]);
 
   const handleTagsChange = (value: string) => {
     setTagsInput(value);
-    form.setValue("tags", parseTags(value), {
+    form.setValue("tags", parseTagsInput(value), {
       shouldDirty: true,
       shouldValidate: true,
     });
   };
 
+  const handleCreateName = async (): Promise<Id<"names"> | null> => {
+    const trimmedName = newNameInput.trim();
+    if (!trimmedName || isSubmittingName) {
+      return null;
+    }
+
+    setIsSubmittingName(true);
+    try {
+      const nameId = await createName({ name: trimmedName });
+      toast.success("Name created successfully");
+      form.setValue("nameId", nameId, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      await form.trigger("nameId");
+      setLocalNameOptions((prev) => {
+        const withoutCurrent = prev.filter((option) => option.value !== nameId);
+        return [...withoutCurrent, { value: nameId, label: trimmedName }];
+      });
+      setNewNameInput("");
+      setIsCreatingName(false);
+      return nameId;
+    } catch (error: any) {
+      toast.error(error?.message ?? "Failed to create name");
+      return null;
+    } finally {
+      setIsSubmittingName(false);
+    }
+  };
+
   const isLoadingProject = Boolean(projectId) && existingProject === undefined;
 
-  const onSubmit = form.handleSubmit(async (values) => {
-    setSubmitError(null);
+  const handleValidSubmit = async (values: ProjectFormValues) => {
+    const payload = prepareProjectPayload(values);
 
-    const payload = {
-      status: values.status,
-      nameId: values.status === "idea" ? undefined : values.nameId ?? undefined,
-      consideringNameIds:
-        values.status === "idea" ? values.consideringNameIds : [],
-      description: values.description?.trim()
-        ? values.description.trim()
-        : undefined,
-      githubRepo: values.githubRepo?.trim()
-        ? values.githubRepo.trim()
-        : undefined,
-      productionUrl: values.productionUrl?.trim()
-        ? values.productionUrl.trim()
-        : undefined,
-      tags: values.tags,
-    };
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log("[ProjectForm] submit", {
+        values,
+        payload,
+      });
+    }
 
     try {
       if (projectId) {
         await updateProject({ projectId, ...payload });
       } else {
         await createProject(payload);
-        form.reset(getEmptyFormValues());
+        form.reset(createEmptyProjectFormValues());
         setTagsInput("");
+        setLocalNameOptions([]);
       }
 
       toast.success(projectId ? "Project updated successfully" : "Project created successfully");
       onSuccess?.();
     } catch (error: any) {
+      if (process.env.NODE_ENV !== "production") {
+        // eslint-disable-next-line no-console
+        console.error("[ProjectForm] mutation failed", {
+          payload,
+          error,
+        });
+      }
       toast.error(error?.message ?? "Something went wrong while saving the project.");
     }
-  });
+  };
+
+  const handleInvalidSubmit = (errors: FieldErrors<ProjectFormValues>) => {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.warn("[ProjectForm] invalid submit", errors);
+    }
+    const firstErrorMessage =
+      errors.nameId?.message ??
+      errors.status?.message ??
+      errors.githubRepo?.message ??
+      errors.productionUrl?.message ??
+      Object.values(errors)[0]?.message ??
+      null;
+
+    if (firstErrorMessage) {
+      toast.error(firstErrorMessage);
+    } else {
+      toast.error("Please fix the highlighted fields and try again.");
+    }
+  };
+
+  const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (form.formState.isSubmitting) {
+      return;
+    }
+
+    if (status !== "idea" && !form.getValues("nameId") && newNameInput.trim()) {
+      const createdNameId = await handleCreateName();
+      if (!createdNameId) {
+        return;
+      }
+    }
+
+    const runSubmit = form.handleSubmit(handleValidSubmit, handleInvalidSubmit);
+    await runSubmit(event);
+  };
 
   if (projectId && existingProject === null) {
     return (
@@ -238,44 +301,20 @@ export function ProjectForm({ projectId, onSuccess, onCancel }: ProjectFormProps
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Considering Names</FormLabel>
+                <ProjectNamePicker
+                  multiple
+                  options={nameOptions}
+                  placeholder={
+                    nameOptions.length
+                      ? "Search and select names to consider"
+                      : "No available names"
+                  }
+                  value={ensureStringArray(field.value)}
+                  onChange={(next) => field.onChange(next)}
+                />
                 <FormDescription>
                   Select names you might assign later (optional).
                 </FormDescription>
-                <div className="space-y-2">
-                  {nameOptions.length === 0 && (
-                    <p className="text-sm text-muted-foreground">
-                      No available names to consider right now.
-                    </p>
-                  )}
-                  {nameOptions.map((option) => {
-                    const checked = field.value.includes(option.value);
-                    const checkboxId = `consider-name-${option.value}`;
-                    return (
-                      <div
-                        key={option.value}
-                        className="flex items-center space-x-2 rounded-md border border-border/60 p-2"
-                      >
-                        <Checkbox
-                          id={checkboxId}
-                          checked={checked}
-                          onCheckedChange={(next) => {
-                            const isChecked = next === true;
-                            if (isChecked && !checked) {
-                              field.onChange([...field.value, option.value]);
-                            } else if (!isChecked && checked) {
-                              field.onChange(
-                                field.value.filter((id) => id !== option.value)
-                              );
-                            }
-                          }}
-                        />
-                        <Label htmlFor={checkboxId} className="text-sm">
-                          {option.label}
-                        </Label>
-                      </div>
-                    );
-                  })}
-                </div>
                 <FormMessage />
               </FormItem>
             )}
@@ -287,28 +326,82 @@ export function ProjectForm({ projectId, onSuccess, onCancel }: ProjectFormProps
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Assigned Name</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  value={field.value}
-                  disabled={nameOptions.length === 0}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a project name" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {nameOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ProjectNamePicker
+                  options={nameOptions}
+                  placeholder={
+                    nameOptions.length
+                      ? "Search and select a project name"
+                      : "No available names"
+                  }
+                  value={
+                    typeof field.value === "string" ? field.value : undefined
+                  }
+                  onChange={(next) => field.onChange(next ?? undefined)}
+                  disabled={nameOptions.length === 0 || isCreatingName}
+                />
+
+                {!isCreatingName ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsCreatingName(true)}
+                    className="mt-2"
+                  >
+                    <Plus className="size-4 mr-2" />
+                    Create New Name
+                  </Button>
+                ) : (
+                  <div className="mt-2 space-y-2 rounded-md border p-3">
+                    <Input
+                      placeholder="Enter new name..."
+                      value={newNameInput}
+                      onChange={(e) => setNewNameInput(e.target.value)}
+                      disabled={isSubmittingName}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void handleCreateName();
+                      }
+                      if (e.key === "Escape") {
+                        setIsCreatingName(false);
+                        setNewNameInput("");
+                      }
+                      }}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          void handleCreateName();
+                        }}
+                        disabled={!newNameInput.trim() || isSubmittingName}
+                      >
+                        {isSubmittingName ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          "Create"
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setIsCreatingName(false);
+                          setNewNameInput("");
+                        }}
+                        disabled={isSubmittingName}
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <FormDescription>
-                  Required for active, paused, or archived projects.
-                  {nameOptions.length === 0 &&
-                    " Add a name in the pool before assigning it here."}
+                  Required for active, paused, or archived projects. Select an existing name or create a new one before saving.
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -337,72 +430,95 @@ export function ProjectForm({ projectId, onSuccess, onCancel }: ProjectFormProps
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="githubRepo"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>GitHub Repository</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="owner/repo"
-                  {...field}
-                  value={field.value ?? ""}
-                />
-              </FormControl>
-              <FormDescription>
-                Format: owner/repo (e.g., vercel/next.js). Leave blank if none.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-4"
+          >
+            {showAdvanced ? (
+              <ChevronDown className="size-4" />
+            ) : (
+              <ChevronRight className="size-4" />
+            )}
+            {advancedLabel}
+          </button>
 
-        <FormField
-          control={form.control}
-          name="productionUrl"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Production URL</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="https://app.example.com"
-                  {...field}
-                  value={field.value ?? ""}
-                />
-              </FormControl>
-              <FormDescription>
-                Public URL for the deployed application (optional).
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          {showAdvanced && (
+            <div className="space-y-6">
+              {status !== "idea" && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="githubRepo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>GitHub Repository</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="owner/repo"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Format: owner/repo (e.g., vercel/next.js).
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-        <FormField
-          control={form.control}
-          name="tags"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Tags</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="internal, beta"
-                  value={tagsInput}
-                  onChange={(event) => handleTagsChange(event.target.value)}
-                  onBlur={() => {
-                    field.onChange(parseTags(tagsInput));
-                    field.onBlur();
-                  }}
-                />
-              </FormControl>
-              <FormDescription>
-                Comma-separated tags help filter projects later.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
+                  <FormField
+                    control={form.control}
+                    name="productionUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Production URL</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="https://app.example.com"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Public URL for the deployed application.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
+
+              <FormField
+                control={form.control}
+                name="tags"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tags</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="internal, beta"
+                        value={tagsInput}
+                        onChange={(event) => handleTagsChange(event.target.value)}
+                        onBlur={() => {
+                          field.onChange(parseTagsInput(tagsInput));
+                          field.onBlur();
+                        }}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Comma-separated tags help filter projects later.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
           )}
-        />
+        </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">

@@ -4,12 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "next dev",
+    "dev": "concurrently --kill-others-on-fail -n \"Next,Convex\" -c \"cyan,magenta\" \"pnpm dev:next\" \"pnpm dev:convex\"",
+    "dev:next": "next dev",
+    "dev:convex": "convex dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "convex:dev": "convex dev",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "convex:deploy": "convex deploy"
   },
   "keywords": [],
@@ -39,12 +41,16 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.16",
     "@types/node": "^24.9.2",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
-    "autoprefixer": "^10.4.21",
+    "concurrently": "^9.2.1",
+    "jsdom": "22.1.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.16",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vite-tsconfig-paths": "^5.1.1",
+    "vitest": "^2.1.3"
   }
 }
