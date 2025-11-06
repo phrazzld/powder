@@ -43,13 +43,6 @@ export const projectFormSchema = z
   })
   .superRefine((data, ctx) => {
     if (data.status === 'idea') {
-      if (data.nameId) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['nameId'],
-          message: 'Ideas cannot have an assigned name',
-        });
-      }
       if (data.githubRepo) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,

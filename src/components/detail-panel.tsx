@@ -69,10 +69,6 @@ export function DetailPanel({ projectId, onClose }: DetailPanelProps) {
 
   // Clear fields when status changes
   useEffect(() => {
-    if (status === "idea" && form.getValues("nameId")) {
-      form.setValue("nameId", undefined, { shouldDirty: true });
-    }
-
     const currentConsidering = ensureStringArray(form.getValues("consideringNameIds"));
     if (status !== "idea" && currentConsidering.length > 0) {
       form.setValue("consideringNameIds", [], { shouldDirty: true });

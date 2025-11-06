@@ -91,15 +91,6 @@ export function ProjectForm({ projectId, onSuccess, onCancel }: ProjectFormProps
     status === "idea" ? "Advanced (Tags)" : "Advanced (GitHub, Production URL, Tags)";
 
   useEffect(() => {
-    const currentNameId = form.getValues("nameId");
-    if (status === "idea" && currentNameId) {
-      form.setValue("nameId", undefined, { shouldDirty: true });
-    }
-
-    if (status !== "idea" && Array.isArray(currentNameId)) {
-      form.setValue("nameId", undefined, { shouldDirty: false });
-    }
-
     const currentConsideringNameIds = ensureStringArray(form.getValues("consideringNameIds"));
     if (status !== "idea" && currentConsideringNameIds.length > 0) {
       form.setValue("consideringNameIds", [], { shouldDirty: true });
