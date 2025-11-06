@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Id } from "@/../convex/_generated/dataModel";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 type DashboardClientProps = {
   preloadedProjects: Preloaded<typeof api.projects.listProjects>;
@@ -36,7 +37,8 @@ export function DashboardClient({
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold">Powder</h1>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
               <Button asChild variant="outline">
                 <Link href="/names">Names</Link>
               </Button>
